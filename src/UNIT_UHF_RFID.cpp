@@ -37,7 +37,7 @@ void Unit_UHF_RFID::begin(HardwareSerial *serial, int baud, uint8_t RX, uint8_t 
 /*! @brief Clear the buffer.*/
 void Unit_UHF_RFID::cleanBuffer()
 {
-    for (int i = 0; i < 200; i++)
+    for (size_t i = 0; i < sizeof(buffer); i++)
     {
         buffer[i] = 0;
     }
