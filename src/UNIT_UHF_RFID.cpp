@@ -106,7 +106,7 @@ void Unit_UHF_RFID::debugFrame(const char *fn, size_t len, bool is_cmd)
             Serial.print("<< ");
         }
 
-        for (uint8_t i = 0; i < len; i++)
+        for (size_t i = 0; i < len; i++)
         {
             Serial.print(hex2str(buffer[i]));
         }
