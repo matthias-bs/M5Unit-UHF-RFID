@@ -48,7 +48,7 @@ void Unit_UHF_RFID::cleanCardsBuffer()
 {
     for (int i = 0; i < 200; i++)
     {
-        cards[i] = {rssi : 0, pc : {0}, epc : {0}, rssi_str : "", pc_str : "", epc_str : ""};
+        cards[i] = CARD{0, {0, 0}, {0}, "", "", ""};
     }
 }
 
