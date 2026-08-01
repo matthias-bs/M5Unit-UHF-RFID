@@ -578,12 +578,11 @@ bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16
             return false;
         }
 
-        uint8_t temp[size];
-        for (uint8_t i = 0; i < size; i++)
+        if (size > sizeof(buffer) - 20)
         {
-            temp[i] = buffer[20 + i];
+            return false;
         }
-        memcpy(data, temp, size);
+        memcpy(data, buffer + 20, size);
         return true;
     }
     return false;
