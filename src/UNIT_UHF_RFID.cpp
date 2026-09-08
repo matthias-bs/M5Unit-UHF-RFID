@@ -58,12 +58,16 @@ void Unit_UHF_RFID::cleanCardsBuffer()
 bool Unit_UHF_RFID::waitMsg(unsigned long time)
 {
     unsigned long start = millis();
-    uint8_t i = 0;
+    size_t i = 0;
     cleanBuffer();
     while (_serial->available() || (millis() - start) < time)
     {
         if (_serial->available())
         {
+            if (i >= sizeof(buffer))
+            {
+                break;
+            }
             uint8_t b = _serial->read();
             buffer[i] = b;
             i++;
@@ -72,8 +76,12 @@ bool Unit_UHF_RFID::waitMsg(unsigned long time)
                 break;
             }
         }
+        else
+        {
+            yield();
+        }
     }
-    if (buffer[0] == 0xbb && buffer[i - 1] == 0x7e)
+    if (i > 0 && buffer[0] == 0xbb && buffer[i - 1] == 0x7e)
     {
         return true;
     }
