@@ -128,7 +128,7 @@ bool Unit_UHF_RFID::filterCardInfo(String epc)
     return true;
 }
 
-/*! @brief Svae the card information.*/
+/*! @brief Save the card information.*/
 bool Unit_UHF_RFID::saveCardInfo(CARD *card)
 {
     String rssi = buffer[5] > 0x7f ? "-" + String(256 - buffer[5]) : String(buffer[5]);
