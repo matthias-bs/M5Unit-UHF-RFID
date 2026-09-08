@@ -558,6 +558,11 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
 
 bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16_t sa, uint32_t access_password)
 {
+    if (size == 0 || size % 2 != 0 || size > sizeof(buffer) - 20)
+    {
+        return false;
+    }
+
     memcpy(buffer, READ_STORAGE_CMD, sizeof(READ_STORAGE_CMD));
     buffer[5] = (access_password >> 24) & 0xff;
     buffer[6] = (access_password >> 16) & 0xff;
@@ -591,10 +596,6 @@ bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16
             return false;
         }
 
-        if (size > sizeof(buffer) - 20)
-        {
-            return false;
-        }
         memcpy(data, buffer + 20, size);
         return true;
     }
