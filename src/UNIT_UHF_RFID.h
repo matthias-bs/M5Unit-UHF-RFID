@@ -7,7 +7,6 @@
 #define _UNIT_UHF_RFID_H_
 
 #include <Arduino.h>
-#include "pins_arduino.h"
 
 /*
 
