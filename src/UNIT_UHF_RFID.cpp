@@ -495,6 +495,11 @@ bool Unit_UHF_RFID::select(uint8_t *epc)
 
 bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint16_t sa, uint32_t access_password)
 {
+    if (size > sizeof(buffer) - 16)
+    {
+        return false;
+    }
+
     memcpy(buffer, WRITE_STORAGE_CMD, sizeof(WRITE_STORAGE_CMD));
     buffer[5] = (access_password >> 24) & 0xff;
     buffer[6] = (access_password >> 16) & 0xff;
@@ -511,8 +516,8 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
     buffer[12] = (word >> 8) & 0xff;
     buffer[13] = word & 0xff;
 
-    uint8_t offset = 14;
-    for (uint8_t i = 0; i < size; i++)
+    size_t offset = 14;
+    for (size_t i = 0; i < size; i++)
     {
         buffer[14 + i] = data[i];
         offset++;
