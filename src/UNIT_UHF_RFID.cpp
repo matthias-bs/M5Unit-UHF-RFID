@@ -106,13 +106,13 @@ void Unit_UHF_RFID::debugFrame(const char *fn, size_t len, bool is_cmd)
             Serial.print("<< ");
         }
 
-        for (size_t i = 0; i < len; i++)
+        const size_t n = (len > sizeof(buffer)) ? sizeof(buffer) : len;
+        for (size_t i = 0; i < n; i++)
         {
             Serial.print(hex2str(buffer[i]));
         }
-        Serial.println(" ");
+        Serial.println();
         Serial.println("-------------------------");
-    }
 }
 
 /*! @brief Filter the received message.*/
