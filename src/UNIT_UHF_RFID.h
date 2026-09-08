@@ -7,7 +7,6 @@
 #define _UNIT_UHF_RFID_H_
 
 #include <Arduino.h>
-#include "pins_arduino.h"
 
 /*
 
@@ -44,7 +43,15 @@ class Unit_UHF_RFID {
    public:
     void begin(HardwareSerial *serial = &Serial2, int baud = 115200, uint8_t RX = 16, uint8_t TX = 17,
                bool debug = false);
+    void debugFrame(const char *fn, size_t len = 25, bool is_cmd = false);
     String getVersion();
+    bool getVersion(String &version);
+    bool sleep();
+    void wakeup();
+    bool getOperatingRegion(uint8_t &region);
+    bool setOperatingRegion(uint8_t region);
+    bool getRxDemodParams(uint8_t &mixer_g, uint8_t &if_g, int16_t &thrd);
+    bool setRxDemodParams(uint8_t mixer_g, uint8_t if_g, int16_t thrd);
     String selectInfo();
     uint8_t pollingOnce();
     uint8_t pollingMultiple(uint16_t polling_count);
@@ -52,6 +59,7 @@ class Unit_UHF_RFID {
     bool setTxPower(uint16_t db);
     bool writeCard(uint8_t *data, size_t size, uint8_t membank, uint16_t sa, uint32_t access_password = 0);
     bool readCard(uint8_t *data, size_t size, uint8_t membank, uint16_t sa, uint32_t access_password = 0);
+    bool lockCard(uint32_t flags, uint32_t access_password);
 };
 
 #endif
