@@ -81,14 +81,30 @@ bool Unit_UHF_RFID::waitMsg(unsigned long time)
             yield();
         }
     }
-    if (i > 0 && buffer[0] == 0xbb && buffer[i - 1] == 0x7e)
-    {
-        return true;
-    }
-    else
+    if (i < 7 || buffer[0] != 0xbb || buffer[i - 1] != 0x7e)
     {
         return false;
     }
+
+    const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+    const size_t frameLength = static_cast<size_t>(payloadLength) + 7;
+    if (frameLength != i || frameLength > sizeof(buffer))
+    {
+        return false;
+    }
+
+    if (buffer[1] != 0x01 && buffer[1] != 0x02)
+    {
+        return false;
+    }
+
+    const uint8_t checksum = calculateChecksum(buffer, 1, payloadLength + 4);
+    return buffer[5 + payloadLength] == checksum;
+}
+
+bool Unit_UHF_RFID::isResponse(uint8_t command, uint8_t type) const
+{
+    return buffer[1] == type && buffer[2] == command;
 }
 
 /*! @brief Send command.*/
@@ -189,7 +205,8 @@ bool Unit_UHF_RFID::sleep()
     {
         debugFrame(__FUNCTION__, 8);
 
-        if (buffer[2] == SLEEP_CMD[2])
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        if (isResponse(SLEEP_CMD[2], 0x01) && payloadLength == 0)
         {
             return true;
         }
@@ -210,7 +227,7 @@ uint8_t Unit_UHF_RFID::pollingOnce()
     uint8_t count = 0;
     while (waitMsg())
     {
-        if (buffer[23] == 0x7e)
+        if (isResponse(POLLING_ONCE_CMD[2], 0x02))
         {
             if (count < 200)
             {
@@ -250,7 +267,7 @@ uint8_t Unit_UHF_RFID::pollingMultiple(uint16_t polling_count)
     uint8_t count = 0;
     while (waitMsg())
     {
-        if (buffer[23] == 0x7e)
+        if (isResponse(POLLING_MULTIPLE_CMD[2], 0x02))
         {
             if (count < 200)
             {
@@ -272,44 +289,32 @@ uint8_t Unit_UHF_RFID::pollingMultiple(uint16_t polling_count)
 String Unit_UHF_RFID::getVersion()
 {
     sendCMD((uint8_t *)HARDWARE_VERSION_CMD, sizeof(HARDWARE_VERSION_CMD));
-    if (waitMsg())
+    if (waitMsg() && isResponse(HARDWARE_VERSION_CMD[2], 0x01))
     {
         String info;
-        for (uint8_t i = 0; i < 50; i++)
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        for (uint16_t i = 0; i < payloadLength; i++)
         {
-            info += (char)buffer[6 + i];
-            if (buffer[8 + i] == 0x7e)
-            {
-                break;
-            }
+            info += static_cast<char>(buffer[5 + i]);
         }
         return info;
     }
-    else
-    {
-        return "ERROR";
-    }
+    return "ERROR";
 }
 
 /*! @brief Get hardware version information.*/
 bool Unit_UHF_RFID::getVersion(String &version)
 {
     sendCMD((uint8_t *)HARDWARE_VERSION_CMD, sizeof(HARDWARE_VERSION_CMD));
-    if (waitMsg())
+    if (waitMsg() && isResponse(HARDWARE_VERSION_CMD[2], 0x01))
     {
         version = "";
-        for (uint8_t i = 0; i < 50; i++)
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        for (uint16_t i = 0; i < payloadLength; i++)
         {
-            version += (char)buffer[6 + i];
-            if (buffer[8 + i] == 0x7e)
-            {
-                break;
-            }
+            version += static_cast<char>(buffer[5 + i]);
         }
-        if (buffer[2] == HARDWARE_VERSION_CMD[2])
-        {
-            return true;
-        }
+        return true;
     }
     return false;
 }
@@ -327,7 +332,7 @@ bool Unit_UHF_RFID::getOperatingRegion(uint8_t &region)
         const uint8_t responseChecksum = calculateChecksum(buffer, 1, 5);
         const uint8_t receivedRegion = buffer[5];
 
-        if ((buffer[1] == responseType) && (buffer[2] == GET_OPERATING_REGION_CMD[2]) &&
+        if (isResponse(GET_OPERATING_REGION_CMD[2], responseType) &&
             (payloadLength == 1) && (buffer[6] == responseChecksum) && (receivedRegion != 0) &&
             (receivedRegion != 5) && (receivedRegion <= 6))
         {
@@ -356,7 +361,8 @@ bool Unit_UHF_RFID::setOperatingRegion(uint8_t region)
     {
         debugFrame(__FUNCTION__);
 
-        if (buffer[2] == SET_OPERATING_REGION_CMD[2])
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        if (isResponse(SET_OPERATING_REGION_CMD[2], 0x01) && payloadLength == 1)
         {
             return true;
         }
@@ -374,7 +380,8 @@ bool Unit_UHF_RFID::getRxDemodParams(uint8_t &mixer_g, uint8_t &if_g, int16_t &t
     {
         debugFrame(__FUNCTION__);
 
-        if (buffer[2] == GET_RX_DEMOD_PARAMS_CMD[2])
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        if (isResponse(GET_RX_DEMOD_PARAMS_CMD[2], 0x01) && payloadLength == 4)
         {
             mixer_g = buffer[5];
             if_g = buffer[6];
@@ -441,7 +448,8 @@ bool Unit_UHF_RFID::setRxDemodParams(uint8_t mixer_g, uint8_t if_g, int16_t thrd
     {
         debugFrame(__FUNCTION__);
 
-        if (buffer[2] == SET_RX_DEMOD_PARAMS_CMD[2])
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        if (isResponse(SET_RX_DEMOD_PARAMS_CMD[2], 0x01) && payloadLength == 4)
         {
             return true;
         }
@@ -455,6 +463,15 @@ String Unit_UHF_RFID::selectInfo()
     if (waitMsg())
     {
         String Info = "";
+        if (!isResponse(GET_SELECT_PARAMETER_CMD[2], 0x01))
+        {
+            return "ERROR";
+        }
+        const uint16_t payloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+        if (payloadLength < 19)
+        {
+            return "ERROR";
+        }
         for (uint8_t i = 12; i < 24; i++)
         {
             Info += hex2str(buffer[i]);
@@ -488,6 +505,10 @@ bool Unit_UHF_RFID::select(uint8_t *epc)
     sendCMD(buffer, sizeof(SET_SELECT_PARAMETER_CMD));
     if (waitMsg())
     {
+        if (!isResponse(SET_SELECT_PARAMETER_CMD[2], 0x01))
+        {
+            return false;
+        }
         debugFrame(__FUNCTION__, 25);
 
         for (uint8_t i = 0; i < sizeof(SET_SELECT_OK); i++)
@@ -545,13 +566,11 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
     sendCMD(buffer, offset + 2);
     if (waitMsg())
     {
-        debugFrame(__FUNCTION__);
-
-        if (WRITE_STORAGE_ERROR[2] == buffer[2])
+        if (!isResponse(WRITE_STORAGE_CMD[2], 0x01))
         {
-            Serial.println("Write Error");
             return false;
         }
+        debugFrame(__FUNCTION__);
         return true;
     }
     return false;
@@ -590,13 +609,11 @@ bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16
     sendCMD(buffer, sizeof(READ_STORAGE_CMD));
     if (waitMsg())
     {
-        debugFrame(__FUNCTION__, 22 + size);
-
-        if (READ_STORAGE_ERROR[2] == buffer[2])
+        if (!isResponse(READ_STORAGE_CMD[2], 0x01))
         {
             return false;
         }
-
+        debugFrame(__FUNCTION__, 22 + size);
         memcpy(data, buffer + 20, size);
         return true;
     }
@@ -630,7 +647,7 @@ bool Unit_UHF_RFID::lockCard(uint32_t flags, uint32_t access_password)
     {
         debugFrame(__FUNCTION__);
 
-        if (buffer[2] == LOCK_STORAGE_CMD[2])
+        if (isResponse(LOCK_STORAGE_CMD[2], 0x01))
         {
             return true;
         }
@@ -659,7 +676,7 @@ bool Unit_UHF_RFID::setTxPower(uint16_t db)
     if (waitMsg())
     {
         debugFrame(__FUNCTION__);
-        if (buffer[2] == SET_TX_POWER[2])
+        if (isResponse(SET_TX_POWER[2], 0x01))
         {
             return true;
         }
