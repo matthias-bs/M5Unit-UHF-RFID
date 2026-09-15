@@ -60,35 +60,42 @@ bool Unit_UHF_RFID::waitMsg(unsigned long time)
     unsigned long start = millis();
     size_t i = 0;
     cleanBuffer();
-    while (_serial->available() || (millis() - start) < time)
+    while (i < 5 && (millis() - start) < time)
     {
         if (_serial->available())
         {
-            if (i >= sizeof(buffer))
-            {
-                break;
-            }
-            uint8_t b = _serial->read();
-            buffer[i] = b;
-            i++;
-            if (b == 0x7e)
-            {
-                break;
-            }
+            buffer[i++] = _serial->read();
         }
         else
         {
             yield();
         }
     }
-    if (i < 7 || buffer[0] != 0xbb || buffer[i - 1] != 0x7e)
+    if (i < 5 || buffer[0] != 0xbb)
     {
         return false;
     }
 
     const uint16_t payloadLength = this->payloadLength();
     const size_t frameLength = static_cast<size_t>(payloadLength) + 7;
-    if (frameLength != i || frameLength > sizeof(buffer))
+    if (frameLength > sizeof(buffer))
+    {
+        return false;
+    }
+
+    while (i < frameLength && (millis() - start) < time)
+    {
+        if (_serial->available())
+        {
+            buffer[i++] = _serial->read();
+        }
+        else
+        {
+            yield();
+        }
+    }
+
+    if (i != frameLength || buffer[frameLength - 1] != 0x7e)
     {
         return false;
     }
@@ -233,7 +240,10 @@ uint8_t Unit_UHF_RFID::pollingOnce()
     while (waitMsg())
     {
         const uint16_t payloadLength = this->payloadLength();
-        if (isResponse(POLLING_ONCE_CMD[2], 0x02) && payloadLength >= 15)
+        const bool isPollingNotification =
+            isResponse(POLLING_ONCE_CMD[2], 0x02) ||
+            isResponse(POLLING_MULTIPLE_CMD[2], 0x02);
+        if (isPollingNotification && payloadLength == 17)
         {
             if (count < 200)
             {
@@ -274,7 +284,10 @@ uint8_t Unit_UHF_RFID::pollingMultiple(uint16_t polling_count)
     while (waitMsg())
     {
         const uint16_t payloadLength = this->payloadLength();
-        if (isResponse(POLLING_ONCE_CMD[2], 0x02) && payloadLength >= 15)
+        const bool isPollingNotification =
+            isResponse(POLLING_ONCE_CMD[2], 0x02) ||
+            isResponse(POLLING_MULTIPLE_CMD[2], 0x02);
+        if (isPollingNotification && payloadLength == 17)
         {
             if (count < 200)
             {
@@ -300,7 +313,7 @@ String Unit_UHF_RFID::getVersion()
     {
         String info;
         const uint16_t payloadLength = this->payloadLength();
-        if (payloadLength < 1)
+        if (payloadLength < 2 || buffer[5] != 0x00)
         {
             return "ERROR";
         }
@@ -321,7 +334,7 @@ bool Unit_UHF_RFID::getVersion(String &version)
     {
         version = "";
         const uint16_t payloadLength = this->payloadLength();
-        if (payloadLength < 1)
+        if (payloadLength < 2 || buffer[5] != 0x00)
         {
             return false;
         }
@@ -582,7 +595,7 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
     if (waitMsg())
     {
         const uint16_t payloadLength = this->payloadLength();
-        if (!isResponse(WRITE_STORAGE_CMD[2], 0x01) || payloadLength != 1 || buffer[5] != 0x00)
+        if (!isResponse(WRITE_STORAGE_CMD[2], 0x01) || payloadLength != 16 || buffer[20] != 0x00)
         {
             return false;
         }
@@ -626,7 +639,7 @@ bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16
     if (waitMsg())
     {
         const uint16_t payloadLength = this->payloadLength();
-        if (!isResponse(READ_STORAGE_CMD[2], 0x01) || buffer[5] != 0x00 ||
+        if (!isResponse(READ_STORAGE_CMD[2], 0x01) ||
             payloadLength < 15 + size)
         {
             return false;
@@ -666,7 +679,7 @@ bool Unit_UHF_RFID::lockCard(uint32_t flags, uint32_t access_password)
         debugFrame(__FUNCTION__);
 
         const uint16_t payloadLength = this->payloadLength();
-        if (isResponse(LOCK_STORAGE_CMD[2], 0x01) && payloadLength == 1 && buffer[5] == 0x00)
+        if (isResponse(LOCK_STORAGE_CMD[2], 0x01) && payloadLength == 16 && buffer[20] == 0x00)
         {
             return true;
         }
