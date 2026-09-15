@@ -553,7 +553,7 @@ bool Unit_UHF_RFID::select(uint8_t *epc)
 
 bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint16_t sa, uint32_t access_password)
 {
-    if (size > sizeof(buffer) - 16)
+    if (size == 0 || size % 2 != 0 || size > sizeof(buffer) - 16)
     {
         return false;
     }
@@ -569,7 +569,7 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
     buffer[10] = (sa >> 8) & 0xff;
     buffer[11] = sa & 0xff;
 
-    uint8_t word = size / 2;
+    uint16_t word = size / 2;
 
     buffer[12] = (word >> 8) & 0xff;
     buffer[13] = word & 0xff;
@@ -607,7 +607,7 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
 
 bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16_t sa, uint32_t access_password)
 {
-    if (size == 0 || size % 2 != 0 || size > sizeof(buffer) - 20)
+    if (size == 0 || size % 2 != 0 || size > sizeof(buffer) - 22)
     {
         return false;
     }
@@ -620,7 +620,7 @@ bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16
     buffer[9] = membank;
     buffer[10] = (sa >> 8) & 0xff;
     buffer[11] = sa & 0xff;
-    uint8_t word = size / 2;
+    uint16_t word = size / 2;
     buffer[12] = (word >> 8) & 0xff;
     buffer[13] = word & 0xff;
 
@@ -640,7 +640,7 @@ bool Unit_UHF_RFID::readCard(uint8_t *data, size_t size, uint8_t membank, uint16
     {
         const uint16_t payloadLength = this->payloadLength();
         if (!isResponse(READ_STORAGE_CMD[2], 0x01) ||
-            payloadLength < 15 + size)
+            payloadLength != 15 + size)
         {
             return false;
         }
