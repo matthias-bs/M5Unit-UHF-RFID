@@ -569,6 +569,10 @@ bool Unit_UHF_RFID::writeCard(uint8_t *data, size_t size, uint8_t membank, uint1
     buffer[10] = (sa >> 8) & 0xff;
     buffer[11] = sa & 0xff;
 
+    const uint16_t payloadLength = 9 + size;
+    buffer[3]                     = (payloadLength >> 8) & 0xff;
+    buffer[4]                     = payloadLength & 0xff;
+
     uint16_t word = size / 2;
 
     buffer[12] = (word >> 8) & 0xff;
