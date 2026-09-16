@@ -496,7 +496,7 @@ String Unit_UHF_RFID::selectInfo()
             return "ERROR";
         }
         const uint16_t payloadLength = this->payloadLength();
-        if (payloadLength < 19)
+        if (payloadLength != 19)
         {
             return "ERROR";
         }
