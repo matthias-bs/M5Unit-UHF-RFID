@@ -34,6 +34,8 @@ class Unit_UHF_RFID {
     void cleanCardsBuffer();
     bool saveCardInfo(CARD *card);
     bool filterCardInfo(String epc);
+    bool isResponse(uint8_t command, uint8_t type) const;
+    uint16_t payloadLength() const;
 
    public:
     bool _debug;
