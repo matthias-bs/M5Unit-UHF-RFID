@@ -237,8 +237,9 @@ bool Unit_UHF_RFID::enterIdle(uint8_t idleTimeMinutes)
 {
     memcpy(buffer, ENTER_IDLE_CMD, sizeof(ENTER_IDLE_CMD));
     buffer[7] = idleTimeMinutes;
-    buffer[8] = calculateChecksum(buffer, 1, 7);
 
+    const uint16_t cmdPayloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+    buffer[5 + cmdPayloadLength] = calculateChecksum(buffer, 1, cmdPayloadLength + 4);
     debugFrame(__FUNCTION__, sizeof(ENTER_IDLE_CMD), true);
     sendCMD(buffer, sizeof(ENTER_IDLE_CMD));
     if (waitMsg())
