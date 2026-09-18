@@ -233,7 +233,7 @@ void Unit_UHF_RFID::wakeup()
 }
 
 /*! @brief Enter manual IDLE mode. A zero-minute timer disables automatic entry. */
-bool Unit_UHF_RFID::enterIdle(uint8_t idleTimeMinutes)
+bool Unit_UHF_RFID::enterIdleMode(uint8_t idleTimeMinutes)
 {
     memcpy(buffer, ENTER_IDLE_CMD, sizeof(ENTER_IDLE_CMD));
     buffer[7] = idleTimeMinutes;
@@ -247,7 +247,7 @@ bool Unit_UHF_RFID::enterIdle(uint8_t idleTimeMinutes)
         debugFrame(__FUNCTION__);
 
         const uint16_t payloadLength = this->payloadLength();
-        if (isResponse(EXIT_IDLE_CMD[2], 0x01) && payloadLength == 1 && buffer[5] == 0x00)
+        if (isResponse(ENTER_IDLE_CMD[2], 0x01) && payloadLength == 1 && buffer[5] == 0x00)
         {
             return true;
         }
@@ -256,7 +256,7 @@ bool Unit_UHF_RFID::enterIdle(uint8_t idleTimeMinutes)
 }
 
 /*! @brief Exit manual IDLE mode. */
-bool Unit_UHF_RFID::exitIdle()
+bool Unit_UHF_RFID::exitIdleMode()
 {
     sendCMD((uint8_t *)EXIT_IDLE_CMD, sizeof(EXIT_IDLE_CMD));
     if (waitMsg())
