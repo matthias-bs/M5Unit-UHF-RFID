@@ -232,6 +232,46 @@ void Unit_UHF_RFID::wakeup()
     _serial->write(0xFF);
 }
 
+/*! @brief Enter manual IDLE mode. A zero-minute timer disables automatic entry. */
+bool Unit_UHF_RFID::enterIdleMode(uint8_t idleTimeMinutes)
+{
+    memcpy(buffer, ENTER_IDLE_CMD, sizeof(ENTER_IDLE_CMD));
+    buffer[7] = idleTimeMinutes;
+
+    const uint16_t cmdPayloadLength = (static_cast<uint16_t>(buffer[3]) << 8) | buffer[4];
+    buffer[5 + cmdPayloadLength] = calculateChecksum(buffer, 1, cmdPayloadLength + 4);
+    debugFrame(__FUNCTION__, sizeof(ENTER_IDLE_CMD), true);
+    sendCMD(buffer, sizeof(ENTER_IDLE_CMD));
+    if (waitMsg())
+    {
+        debugFrame(__FUNCTION__);
+
+        const uint16_t payloadLength = this->payloadLength();
+        if (isResponse(ENTER_IDLE_CMD[2], 0x01) && payloadLength == 1 && buffer[5] == 0x00)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*! @brief Exit manual IDLE mode. */
+bool Unit_UHF_RFID::exitIdleMode()
+{
+    sendCMD((uint8_t *)EXIT_IDLE_CMD, sizeof(EXIT_IDLE_CMD));
+    if (waitMsg())
+    {
+        debugFrame(__FUNCTION__);
+
+        const uint16_t payloadLength = this->payloadLength();
+        if (isResponse(EXIT_IDLE_CMD[2], 0x01) && payloadLength == 1 && buffer[5] == 0x00)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 uint8_t Unit_UHF_RFID::pollingOnce()
 {
     cleanCardsBuffer();
