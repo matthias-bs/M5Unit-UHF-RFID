@@ -52,6 +52,7 @@ class Unit_UHF_RFID {
     void wakeup();
     bool enterIdleMode(uint8_t idleTimeMinutes);
     bool exitIdleMode();
+    bool setIdleSleepTime(uint8_t idleTimeMinutes);
     bool getOperatingRegion(uint8_t &region);
     bool setOperatingRegion(uint8_t region);
     bool getRxDemodParams(uint8_t &mixer_g, uint8_t &if_g, int16_t &thrd);
