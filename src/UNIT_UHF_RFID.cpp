@@ -272,6 +272,34 @@ bool Unit_UHF_RFID::exitIdleMode()
     return false;
 }
 
+/*! @brief Set the automatic module sleep timeout. */
+bool Unit_UHF_RFID::setIdleSleepTime(uint8_t idleTimeMinutes)
+{
+    if (idleTimeMinutes > 30)
+    {
+        return false;
+    }
+
+    memcpy(buffer, IDLE_SLEEP_TIME_CMD, sizeof(IDLE_SLEEP_TIME_CMD));
+    buffer[5] = idleTimeMinutes;
+    buffer[6] = calculateChecksum(buffer, 1, 5);
+
+    debugFrame(__FUNCTION__, sizeof(IDLE_SLEEP_TIME_CMD), true);
+    sendCMD(buffer, sizeof(IDLE_SLEEP_TIME_CMD));
+    if (waitMsg())
+    {
+        debugFrame(__FUNCTION__);
+
+        const uint16_t payloadLength = this->payloadLength();
+        if (isResponse(IDLE_SLEEP_TIME_CMD[2], 0x01) && payloadLength == 1 &&
+            buffer[5] == idleTimeMinutes)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 uint8_t Unit_UHF_RFID::pollingOnce()
 {
     cleanCardsBuffer();
